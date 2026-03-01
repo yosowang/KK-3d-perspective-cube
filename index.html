@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 消失点与透视 - By Yoso</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #1a1a1a; color: white; font-family: sans-serif; user-select: none; }
+        #info { position: absolute; top: 10px; width: 100%; text-align: center; pointer-events: none; text-shadow: 1px 1px 2px black; }
+        
+        /* 控制面板样式 */
+        #controls { position: absolute; bottom: 15px; left: 15px; background: rgba(0, 0, 0, 0.85); padding: 15px; border-radius: 8px; border: 1px solid #555; width: 320px; box-sizing: border-box; transition: opacity 0.3s; }
+        .control-group { margin-bottom: 15px; }
+        .control-group h4 { margin: 0 0 10px 0; color: #aaa; border-bottom: 1px solid #444; padding-bottom: 5px; font-size: 14px; }
+        label { cursor: pointer; display: block; margin-bottom: 5px; font-size: 13px; }
+        .highlight { color: #ffff55; font-weight: bold; }
+        
+        /* 滑动条样式 */
+        .slider-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 12px;}
+        .slider-container span { width: 45px; display: inline-block; }
+        .slider-container input[type=range] { flex-grow: 1; margin: 0 10px; cursor: pointer; }
+        .slider-value { width: 40px; text-align: right; color: #00ffcc; font-family: monospace; }
+
+        /* 按钮通用样式 */
+        button { width: 100%; padding: 8px; margin-bottom: 8px; cursor: pointer; background: #444; color: white; border: 1px solid #666; border-radius: 4px; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #666; }
+        button:active { background: #888; }
+        
+        #btn-2pt { background: #2b5797; border-color: #4a76b8; }
+        #btn-2pt:hover { background: #3c6db3; }
+        
+        /* 专属署名样式 */
+        #watermark { position: absolute; bottom: 15px; right: 20px; font-family: "Georgia", serif; font-size: 16px; color: rgba(255, 255, 255, 0.3); pointer-events: none; letter-spacing: 2px; font-style: italic; }
+
+        /* 新增：隐藏面板的悬浮按钮 */
+        #togglePanelBtn { position: absolute; top: 15px; right: 15px; width: auto; padding: 8px 15px; background: rgba(0, 0, 0, 0.7); z-index: 100; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="info">
+        <h3>KK魔法学院-透视与消失点可视化</h3>
+        <p>左键拖动旋转视角 | 滚轮缩放 | 面板精确控制</p>
+    </div>
+
+    <div id="watermark">By Yoso</div>
+
+    <button id="togglePanelBtn" onclick="toggleControls()">👁️ 隐藏面板</button>
+
+    <div id="controls">
+        <div class="control-group">
+            <label><input type="checkbox" id="autoRotate"> 开启自动旋转 (禁用手动旋转)</label>
+            <label class="highlight"><input type="checkbox" id="showXYLine"> 显示 X-Y 消失点连线 (黄色地平线)</label>
+        </div>
+        
+        <div class="control-group">
+            <h4>平移控制 (Position)</h4>
+            <div class="slider-container">
+                <span style="color: #ff5555;">X 轴:</span>
+                <input type="range" id="posX" min="-5" max="5" step="0.1" value="0">
+                <span class="slider-value" id="valPosX">0.0</span>
+            </div>
+            <div class="slider-container">
+                <span style="color: #55ff55;">Y 轴:</span>
+                <input type="range" id="posY" min="-5" max="5" step="0.1" value="0">
+                <span class="slider-value" id="valPosY">0.0</span>
+            </div>
+            <div class="slider-container">
+                <span style="color: #5555ff;">Z 轴:</span>
+                <input type="range" id="posZ" min="-5" max="5" step="0.1" value="0">
+                <span class="slider-value" id="valPosZ">0.0</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h4>旋转控制 (Rotation)</h4>
+            <div class="slider-container">
+                <span style="color: #ff5555;">X 轴:</span>
+                <input type="range" id="rotX" min="-180" max="180" step="1" value="90">
+                <span class="slider-value" id="valRotX">90°</span>
+            </div>
+            <div class="slider-container">
+                <span style="color: #55ff55;">Y 轴:</span>
+                <input type="range" id="rotY" min="-180" max="180" step="1" value="0">
+                <span class="slider-value" id="valRotY">0°</span>
+            </div>
+            <div class="slider-container">
+                <span style="color: #5555ff;">Z 轴:</span>
+                <input type="range" id="rotZ" min="-180" max="180" step="1" value="0">
+                <span class="slider-value" id="valRotZ">0°</span>
+            </div>
+        </div>
+        
+        <button id="btn-2pt" onclick="setToTwoPointPerspective()">📐 强制两点透视 (垂直Z轴)</button>
+        <button onclick="resetAll()">🔄 重置方块与摄像机</button>
+    </div>
+
+    <script>
+        // ================= 1. 初始化场景 =================
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x1a1a1a, 0.0004);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // ================= 2. 创建核心物体 =================
+        const cubeGroup = new THREE.Group();
+        scene.add(cubeGroup);
+
+        const size = 1;
+        const geometry = new THREE.BoxGeometry(size, size, size);
+        const material = new THREE.MeshBasicMaterial({ color: 0x444444, transparent: true, opacity: 0.7 });
+        const cube = new THREE.Mesh(geometry, material);
+        cubeGroup.add(cube);
+
+        const edges = new THREE.EdgesGeometry(geometry);
+        const edgeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+        cubeGroup.add(new THREE.LineSegments(edges, edgeMaterial));
+
+        const axesHelper = new THREE.AxesHelper(size * 1.5);
+        cubeGroup.add(axesHelper);
+
+        // ================= 3. 绘制无限延长线 =================
+        const extLength = 2000; 
+        const offset = size / 2;
+
+        const matX = new THREE.LineBasicMaterial({ color: 0xff5555, transparent: true, opacity: 0.5 });
+        const matY = new THREE.LineBasicMaterial({ color: 0x55ff55, transparent: true, opacity: 0.5 });
+        const matZ = new THREE.LineBasicMaterial({ color: 0x5555ff, transparent: true, opacity: 0.5 });
+
+        [-offset, offset].forEach(y => { [-offset, offset].forEach(z => {
+            cubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-extLength, y, z), new THREE.Vector3(extLength, y, z)]), matX));
+        });});
+        [-offset, offset].forEach(x => { [-offset, offset].forEach(z => {
+            cubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, -extLength, z), new THREE.Vector3(x, extLength, z)]), matY));
+        });});
+        [-offset, offset].forEach(x => { [-offset, offset].forEach(y => {
+            cubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, y, -extLength), new THREE.Vector3(x, y, extLength)]), matZ));
+        });});
+
+        // ================= 4. 消失点连线 =================
+        const xyLinePoints = [
+            new THREE.Vector3(extLength, 0, 0), new THREE.Vector3(0, extLength, 0),    
+            new THREE.Vector3(0, extLength, 0), new THREE.Vector3(-extLength, 0, 0),   
+            new THREE.Vector3(-extLength, 0, 0), new THREE.Vector3(0, -extLength, 0),  
+            new THREE.Vector3(0, -extLength, 0), new THREE.Vector3(extLength, 0, 0)    
+        ];
+        const xyVPLine = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(xyLinePoints), new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2 }));
+        xyVPLine.visible = false; 
+        cubeGroup.add(xyVPLine);
+
+        // ================= 5. UI 交互逻辑 =================
+        const uiElements = {
+            autoRotate: document.getElementById('autoRotate'),
+            showXYLine: document.getElementById('showXYLine'),
+            posX: document.getElementById('posX'), posY: document.getElementById('posY'), posZ: document.getElementById('posZ'),
+            rotX: document.getElementById('rotX'), rotY: document.getElementById('rotY'), rotZ: document.getElementById('rotZ'),
+            valPosX: document.getElementById('valPosX'), valPosY: document.getElementById('valPosY'), valPosZ: document.getElementById('valPosZ'),
+            valRotX: document.getElementById('valRotX'), valRotY: document.getElementById('valRotY'), valRotZ: document.getElementById('valRotZ')
+        };
+
+        function updateTransform() {
+            cubeGroup.position.set(
+                parseFloat(uiElements.posX.value),
+                parseFloat(uiElements.posZ.value), 
+                parseFloat(uiElements.posY.value)
+            );
+
+            if (!uiElements.autoRotate.checked) {
+                cubeGroup.rotation.set(
+                    THREE.MathUtils.degToRad(parseFloat(uiElements.rotX.value)),
+                    THREE.MathUtils.degToRad(parseFloat(uiElements.rotY.value)),
+                    THREE.MathUtils.degToRad(parseFloat(uiElements.rotZ.value))
+                );
+            }
+            updateLabels();
+        }
+
+        function updateLabels() {
+            uiElements.valPosX.innerText = parseFloat(uiElements.posX.value).toFixed(1);
+            uiElements.valPosY.innerText = parseFloat(uiElements.posY.value).toFixed(1);
+            uiElements.valPosZ.innerText = parseFloat(uiElements.posZ.value).toFixed(1);
+            
+            uiElements.valRotX.innerText = Math.round(THREE.MathUtils.radToDeg(cubeGroup.rotation.x)) % 360 + '°';
+            uiElements.valRotY.innerText = Math.round(THREE.MathUtils.radToDeg(cubeGroup.rotation.y)) % 360 + '°';
+            uiElements.valRotZ.innerText = Math.round(THREE.MathUtils.radToDeg(cubeGroup.rotation.z)) % 360 + '°';
+        }
+
+        ['posX', 'posY', 'posZ', 'rotX', 'rotY', 'rotZ'].forEach(id => {
+            uiElements[id].addEventListener('input', updateTransform);
+        });
+
+        function setToTwoPointPerspective() {
+            uiElements.autoRotate.checked = false;
+            uiElements.rotX.value = 90;
+            uiElements.rotZ.value = 0;
+            updateTransform();
+
+            camera.position.y = controls.target.y;
+            controls.update();
+        }
+
+        function resetAll() {
+            camera.position.set(3, 3, 5);
+            camera.lookAt(0, 0, 0);
+            controls.target.set(0, 0, 0);
+            
+            uiElements.posX.value = 0; uiElements.posY.value = 0; uiElements.posZ.value = 0;
+            uiElements.rotX.value = 90; 
+            uiElements.rotY.value = 0; uiElements.rotZ.value = 0;
+            uiElements.autoRotate.checked = false;
+            
+            updateTransform();
+            controls.update();
+        }
+        resetAll();
+
+        // ================= 新增：面板显隐切换逻辑 =================
+        let isPanelVisible = true;
+        function toggleControls() {
+            const panel = document.getElementById('controls');
+            const btn = document.getElementById('togglePanelBtn');
+            isPanelVisible = !isPanelVisible;
+            
+            if (isPanelVisible) {
+                panel.style.display = 'block';
+                btn.innerText = '👁️ 隐藏面板';
+            } else {
+                panel.style.display = 'none';
+                btn.innerText = '⚙️ 显示面板';
+            }
+        }
+
+        // ================= 6. 动画 =================
+        function animate() {
+            requestAnimationFrame(animate);
+
+            xyVPLine.visible = uiElements.showXYLine.checked;
+
+            if (uiElements.autoRotate.checked) {
+                cubeGroup.rotation.x += 0.003;
+                cubeGroup.rotation.y += 0.005;
+                cubeGroup.rotation.z += 0.002;
+                
+                uiElements.rotX.value = Math.round(THREE.MathUtils.radToDeg(cubeGroup.rotation.x)) % 360;
+                uiElements.rotY.value = Math.round(THREE.MathUtils.radToDeg(cubeGroup.rotation.y)) % 360;
+                uiElements.rotZ.value = Math.round(THREE.MathUtils.radToDeg(cubeGroup.rotation.z)) % 360;
+                updateLabels();
+                
+                uiElements.rotX.disabled = true; uiElements.rotY.disabled = true; uiElements.rotZ.disabled = true;
+            } else {
+                uiElements.rotX.disabled = false; uiElements.rotY.disabled = false; uiElements.rotZ.disabled = false;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
