@@ -5,31 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D 消失点与透视 - By Yoso</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #1a1a1a; color: white; font-family: sans-serif; user-select: none; }
-        #info { position: absolute; top: 10px; width: 100%; text-align: center; pointer-events: none; text-shadow: 1px 1px 2px black; }
+        /* 基础与深色模式（默认）样式 */
+        body { margin: 0; overflow: hidden; background-color: #1a1a1a; color: white; font-family: sans-serif; user-select: none; transition: background-color 0.3s, color 0.3s; }
+        #info { position: absolute; top: 10px; width: 100%; text-align: center; pointer-events: none; text-shadow: 1px 1px 2px black; transition: text-shadow 0.3s; }
         
-        #controls { position: absolute; bottom: 15px; left: 15px; background: rgba(0, 0, 0, 0.85); padding: 15px; border-radius: 8px; border: 1px solid #555; width: 320px; box-sizing: border-box; transition: opacity 0.3s; max-height: 90vh; overflow-y: auto; }
-        /* 隐藏滚动条但保留功能 */
+        #controls { position: absolute; bottom: 15px; left: 15px; background: rgba(0, 0, 0, 0.85); padding: 15px; border-radius: 8px; border: 1px solid #555; width: 320px; box-sizing: border-box; transition: all 0.3s; max-height: 90vh; overflow-y: auto; }
         #controls::-webkit-scrollbar { display: none; } 
         
         .control-group { margin-bottom: 15px; }
-        .control-group h4 { margin: 0 0 10px 0; color: #aaa; border-bottom: 1px solid #444; padding-bottom: 5px; font-size: 14px; }
+        .control-group h4 { margin: 0 0 10px 0; color: #aaa; border-bottom: 1px solid #444; padding-bottom: 5px; font-size: 14px; transition: color 0.3s, border-color 0.3s; }
         label { cursor: pointer; display: block; margin-bottom: 5px; font-size: 13px; }
-        .highlight { color: #ffff55; font-weight: bold; }
+        .highlight { color: #ffff55; font-weight: bold; transition: color 0.3s; }
         
         .slider-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 12px;}
         .slider-container span { width: 45px; display: inline-block; }
         .slider-container input[type=range] { flex-grow: 1; margin: 0 10px; cursor: pointer; }
-        .slider-value { width: 40px; text-align: right; color: #00ffcc; font-family: monospace; }
+        .slider-value { width: 40px; text-align: right; color: #00ffcc; font-family: monospace; transition: color 0.3s; }
 
-        button { width: 100%; padding: 8px; margin-bottom: 8px; cursor: pointer; background: #444; color: white; border: 1px solid #666; border-radius: 4px; font-weight: bold; transition: background 0.2s; }
+        button { width: 100%; padding: 8px; margin-bottom: 8px; cursor: pointer; background: #444; color: white; border: 1px solid #666; border-radius: 4px; font-weight: bold; transition: all 0.2s; }
         button:hover { background: #666; }
         button:active { background: #888; }
         
         #btn-2pt { background: #2b5797; border-color: #4a76b8; }
         #btn-2pt:hover { background: #3c6db3; }
         
-        /* 画面平移 十字键样式 */
         .d-pad { display: grid; grid-template-columns: 40px 40px 40px; gap: 5px; justify-content: center; margin-bottom: 5px; }
         .btn-up { grid-column: 2; grid-row: 1; }
         .btn-left { grid-column: 1; grid-row: 2; }
@@ -38,8 +37,28 @@
         .btn-down { grid-column: 2; grid-row: 3; }
         .d-pad button { height: 35px; font-weight: bold; font-size: 16px; padding: 0; display: flex; align-items: center; justify-content: center; margin-bottom: 0; }
 
-        #watermark { position: absolute; bottom: 15px; right: 20px; font-family: "Georgia", serif; font-size: 16px; color: rgba(255, 255, 255, 0.3); pointer-events: none; letter-spacing: 2px; font-style: italic; }
-        #togglePanelBtn { position: absolute; top: 15px; right: 15px; width: auto; padding: 8px 15px; background: rgba(0, 0, 0, 0.7); z-index: 100; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+        #watermark { position: absolute; bottom: 15px; right: 20px; font-family: "Georgia", serif; font-size: 16px; color: rgba(255, 255, 255, 0.3); pointer-events: none; letter-spacing: 2px; font-style: italic; transition: color 0.3s; }
+        
+        /* 顶部右侧悬浮按钮组 */
+        #topRightBtns { position: absolute; top: 15px; right: 15px; display: flex; gap: 10px; z-index: 100; }
+        .float-btn { padding: 8px 15px; background: rgba(0, 0, 0, 0.7); color: white; border: 1px solid #555; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.5); backdrop-filter: blur(4px); margin: 0; width: auto; font-weight: normal; }
+        .float-btn:hover { background: rgba(50, 50, 50, 0.9); }
+
+        /* ================= 浅色模式（中性灰） ================= */
+        body.light-mode { background-color: #d8d8d8; color: #222; } 
+        body.light-mode #info { text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.6); }
+        body.light-mode #controls { background: rgba(235, 235, 235, 0.9); border-color: #bbb; box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
+        body.light-mode .control-group h4 { color: #444; border-bottom-color: #ccc; }
+        body.light-mode button { background: #e0e0e0; color: #222; border-color: #bbb; }
+        body.light-mode button:hover { background: #d0d0d0; }
+        body.light-mode #btn-2pt { background: #4a90e2; color: white; border-color: #357abd; }
+        body.light-mode #btn-2pt:hover { background: #357abd; }
+        body.light-mode .highlight { color: #c0392b; } 
+        body.light-mode .slider-value { color: #0044cc; }
+        body.light-mode .btn-reset { background: #ccc; }
+        body.light-mode #watermark { color: rgba(0, 0, 0, 0.25); }
+        body.light-mode .float-btn { background: rgba(220, 220, 220, 0.85); color: #222; border-color: #aaa; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        body.light-mode .float-btn:hover { background: rgba(200, 200, 200, 0.9); }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -47,22 +66,26 @@
 <body>
 
     <div id="info">
-        <h3>KK魔法学院-透视与消失点可视化 By Yoso</h3>
-        <p>左键旋转 | 右键平移画面 | 滚轮缩放</p>
+        <h3>KK魔法学院-透视与消失点可视化-By Yoso</h3>
+        <p>左键旋转 | 右键平移 | 滚轮缩放</p>
     </div>
 
     <div id="watermark">By Yoso</div>
-    <button id="togglePanelBtn" onclick="toggleControls()">⚙️ 隐藏面板</button>
+    
+    <div id="topRightBtns">
+        <button id="themeBtn" class="float-btn" onclick="toggleTheme()">浅色模式</button>
+        <button id="togglePanelBtn" class="float-btn" onclick="toggleControls()">👁️ 隐藏面板</button>
+    </div>
 
     <div id="controls">
         <div class="control-group">
             <label><input type="checkbox" id="autoRotate"> 开启自动旋转 (禁用手动旋转)</label>
-            <label class="highlight"><input type="checkbox" id="showXYLine"> 显示 X-Y 消失点连线 (黄色地平线)</label>
+            <label class="highlight"><input type="checkbox" id="showXYLine"> 显示 X-Y 消失点连线 (地平线)</label>
         </div>
         
         <div class="control-group">
             <h4>在画面中平移 (Camera Pan)</h4>
-            <div style="text-align: center; margin-bottom: 8px; color: #aaa; font-size: 11px;">长按方向键移动，或直接鼠标右键拖动画布</div>
+            <div style="text-align: center; margin-bottom: 8px; color: #888; font-size: 11px;">长按方向键移动，或直接鼠标右键拖动画布</div>
             <div class="d-pad">
                 <button id="panUp" class="btn-up">↑</button>
                 <button id="panLeft" class="btn-left">←</button>
@@ -117,6 +140,7 @@
     <script>
         // ================= 1. 初始化场景 =================
         const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a1a); 
         scene.fog = new THREE.FogExp2(0x1a1a1a, 0.0004);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
@@ -139,7 +163,8 @@
 
         const edges = new THREE.EdgesGeometry(geometry);
         const edgeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
-        cubeGroup.add(new THREE.LineSegments(edges, edgeMaterial));
+        const cubeEdges = new THREE.LineSegments(edges, edgeMaterial);
+        cubeGroup.add(cubeEdges);
 
         const axesHelper = new THREE.AxesHelper(size * 1.5);
         cubeGroup.add(axesHelper);
@@ -149,11 +174,17 @@
         const offset = size / 2;
 
         const matX = new THREE.LineBasicMaterial({ color: 0xff5555, transparent: true, opacity: 0.5 });
+        
+        // 提取 Y 轴材质，方便后续动态修改颜色
         const matY = new THREE.LineBasicMaterial({ color: 0x55ff55, transparent: true, opacity: 0.5 });
+        
         const matZ = new THREE.LineBasicMaterial({ color: 0x5555ff, transparent: true, opacity: 0.5 });
 
         [-offset, offset].forEach(y => { [-offset, offset].forEach(z => { cubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-extLength, y, z), new THREE.Vector3(extLength, y, z)]), matX)); });});
+        
+        // 使用提取出的 matY 创建 Y 轴平行线
         [-offset, offset].forEach(x => { [-offset, offset].forEach(z => { cubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, -extLength, z), new THREE.Vector3(x, extLength, z)]), matY)); });});
+        
         [-offset, offset].forEach(x => { [-offset, offset].forEach(y => { cubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, y, -extLength), new THREE.Vector3(x, y, extLength)]), matZ)); });});
 
         const xyLinePoints = [
@@ -162,11 +193,46 @@
             new THREE.Vector3(-extLength, 0, 0), new THREE.Vector3(0, -extLength, 0),  
             new THREE.Vector3(0, -extLength, 0), new THREE.Vector3(extLength, 0, 0)    
         ];
-        const xyVPLine = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(xyLinePoints), new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2 }));
+        const xyVPLineMat = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2 });
+        const xyVPLine = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(xyLinePoints), xyVPLineMat);
         xyVPLine.visible = false; 
         cubeGroup.add(xyVPLine);
 
-        // ================= 4. UI 交互 =================
+        // ================= 4. 主题切换逻辑 (重点修改处) =================
+        let isLightMode = false;
+        function toggleTheme() {
+            isLightMode = !isLightMode;
+            const themeBtn = document.getElementById('themeBtn');
+            
+            if (isLightMode) {
+                document.body.classList.add('light-mode');
+                themeBtn.innerText = '深色模式';
+                
+                scene.background.setHex(0xd8d8d8); 
+                scene.fog.color.setHex(0xd8d8d8);  
+                edgeMaterial.color.setHex(0x222222); 
+                xyVPLineMat.color.setHex(0xc0392b);  
+
+                // 【关键修复】：浅色模式下，将 Y 轴颜色改为深森林绿
+                matY.color.setHex(0x006400); 
+                matY.opacity = 0.7; // 稍微调高一点透明度，让它更实
+
+            } else {
+                document.body.classList.remove('light-mode');
+                themeBtn.innerText = '浅色模式';
+                
+                scene.background.setHex(0x1a1a1a);
+                scene.fog.color.setHex(0x1a1a1a);
+                edgeMaterial.color.setHex(0xffffff);
+                xyVPLineMat.color.setHex(0xffff00);
+
+                // 【恢复】：深色模式下，恢复亮绿色
+                matY.color.setHex(0x55ff55);
+                matY.opacity = 0.5;
+            }
+        }
+
+        // ================= 5. UI 交互 =================
         const uiElements = {
             autoRotate: document.getElementById('autoRotate'), showXYLine: document.getElementById('showXYLine'),
             posX: document.getElementById('posX'), posY: document.getElementById('posY'), posZ: document.getElementById('posZ'),
@@ -212,43 +278,33 @@
         function toggleControls() {
             const panel = document.getElementById('controls'); const btn = document.getElementById('togglePanelBtn');
             isPanelVisible = !isPanelVisible;
-            if (isPanelVisible) { panel.style.display = 'block'; btn.innerText = '⚙️ 隐藏面板'; } 
-            else { panel.style.display = 'none'; btn.innerText = '⚙️ 显示面板'; }
+            if (isPanelVisible) { panel.style.display = 'block'; btn.innerText = '👁️ 隐藏面板'; } 
+            else { panel.style.display = 'none'; btn.innerText = '👁️ 显示面板'; }
         }
 
-        // ================= 5. 新增：画面平移逻辑 =================
         const panState = { up: false, down: false, left: false, right: false };
         const panSpeed = 0.08;
 
         function panCamera(deltaX, deltaY) {
-            // 获取摄像机当前的局部 X轴(向右) 和 Y轴(向上)
             const right = new THREE.Vector3(); const up = new THREE.Vector3();
             camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
-            
             right.multiplyScalar(deltaX); up.multiplyScalar(deltaY);
-            
-            // 同时移动摄像机和观察目标点，实现完美的画面平移
-            camera.position.add(right).add(up);
-            controls.target.add(right).add(up);
-            controls.update();
+            camera.position.add(right).add(up); controls.target.add(right).add(up); controls.update();
         }
 
         function bindPanBtn(id, dir) {
             const btn = document.getElementById(id);
             const start = (e) => { e.preventDefault(); panState[dir] = true; };
             const stop = (e) => { e.preventDefault(); panState[dir] = false; };
-            
             btn.addEventListener('mousedown', start); btn.addEventListener('mouseup', stop); btn.addEventListener('mouseleave', stop);
             btn.addEventListener('touchstart', start, {passive: false}); btn.addEventListener('touchend', stop, {passive: false});
         }
 
         bindPanBtn('panUp', 'up'); bindPanBtn('panDown', 'down'); bindPanBtn('panLeft', 'left'); bindPanBtn('panRight', 'right');
 
-        // ================= 6. 动画 =================
         function animate() {
             requestAnimationFrame(animate);
 
-            // 处理持续长按的平移按键
             if (panState.up) panCamera(0, panSpeed);
             if (panState.down) panCamera(0, -panSpeed);
             if (panState.left) panCamera(-panSpeed, 0);
