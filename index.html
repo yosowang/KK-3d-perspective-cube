@@ -8,20 +8,20 @@
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; color: white; font-family: sans-serif; user-select: none; }
         #info { position: absolute; top: 10px; width: 100%; text-align: center; pointer-events: none; text-shadow: 1px 1px 2px black; }
         
-        /* 控制面板样式 */
-        #controls { position: absolute; bottom: 15px; left: 15px; background: rgba(0, 0, 0, 0.85); padding: 15px; border-radius: 8px; border: 1px solid #555; width: 320px; box-sizing: border-box; transition: opacity 0.3s; }
+        #controls { position: absolute; bottom: 15px; left: 15px; background: rgba(0, 0, 0, 0.85); padding: 15px; border-radius: 8px; border: 1px solid #555; width: 320px; box-sizing: border-box; transition: opacity 0.3s; max-height: 90vh; overflow-y: auto; }
+        /* 隐藏滚动条但保留功能 */
+        #controls::-webkit-scrollbar { display: none; } 
+        
         .control-group { margin-bottom: 15px; }
         .control-group h4 { margin: 0 0 10px 0; color: #aaa; border-bottom: 1px solid #444; padding-bottom: 5px; font-size: 14px; }
         label { cursor: pointer; display: block; margin-bottom: 5px; font-size: 13px; }
         .highlight { color: #ffff55; font-weight: bold; }
         
-        /* 滑动条样式 */
         .slider-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 12px;}
         .slider-container span { width: 45px; display: inline-block; }
         .slider-container input[type=range] { flex-grow: 1; margin: 0 10px; cursor: pointer; }
         .slider-value { width: 40px; text-align: right; color: #00ffcc; font-family: monospace; }
 
-        /* 按钮通用样式 */
         button { width: 100%; padding: 8px; margin-bottom: 8px; cursor: pointer; background: #444; color: white; border: 1px solid #666; border-radius: 4px; font-weight: bold; transition: background 0.2s; }
         button:hover { background: #666; }
         button:active { background: #888; }
@@ -29,10 +29,16 @@
         #btn-2pt { background: #2b5797; border-color: #4a76b8; }
         #btn-2pt:hover { background: #3c6db3; }
         
-        /* 专属署名样式 */
-        #watermark { position: absolute; bottom: 15px; right: 20px; font-family: "Georgia", serif; font-size: 16px; color: rgba(255, 255, 255, 0.3); pointer-events: none; letter-spacing: 2px; font-style: italic; }
+        /* 画面平移 十字键样式 */
+        .d-pad { display: grid; grid-template-columns: 40px 40px 40px; gap: 5px; justify-content: center; margin-bottom: 5px; }
+        .btn-up { grid-column: 2; grid-row: 1; }
+        .btn-left { grid-column: 1; grid-row: 2; }
+        .btn-reset { grid-column: 2; grid-row: 2; font-size: 18px; background: #333; }
+        .btn-right { grid-column: 3; grid-row: 2; }
+        .btn-down { grid-column: 2; grid-row: 3; }
+        .d-pad button { height: 35px; font-weight: bold; font-size: 16px; padding: 0; display: flex; align-items: center; justify-content: center; margin-bottom: 0; }
 
-        /* 新增：隐藏面板的悬浮按钮 */
+        #watermark { position: absolute; bottom: 15px; right: 20px; font-family: "Georgia", serif; font-size: 16px; color: rgba(255, 255, 255, 0.3); pointer-events: none; letter-spacing: 2px; font-style: italic; }
         #togglePanelBtn { position: absolute; top: 15px; right: 15px; width: auto; padding: 8px 15px; background: rgba(0, 0, 0, 0.7); z-index: 100; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -41,13 +47,12 @@
 <body>
 
     <div id="info">
-        <h3>KK魔法学院-透视与消失点可视化</h3>
-        <p>左键拖动旋转视角 | 滚轮缩放 | 面板精确控制</p>
+        <h3>KK魔法学院-透视与消失点可视化 By Yoso</h3>
+        <p>左键旋转 | 右键平移画面 | 滚轮缩放</p>
     </div>
 
     <div id="watermark">By Yoso</div>
-
-    <button id="togglePanelBtn" onclick="toggleControls()">👁️ 隐藏面板</button>
+    <button id="togglePanelBtn" onclick="toggleControls()">⚙️ 隐藏面板</button>
 
     <div id="controls">
         <div class="control-group">
@@ -56,7 +61,19 @@
         </div>
         
         <div class="control-group">
-            <h4>平移控制 (Position)</h4>
+            <h4>在画面中平移 (Camera Pan)</h4>
+            <div style="text-align: center; margin-bottom: 8px; color: #aaa; font-size: 11px;">长按方向键移动，或直接鼠标右键拖动画布</div>
+            <div class="d-pad">
+                <button id="panUp" class="btn-up">↑</button>
+                <button id="panLeft" class="btn-left">←</button>
+                <button id="panReset" class="btn-reset" onclick="resetAll()">⏺</button>
+                <button id="panRight" class="btn-right">→</button>
+                <button id="panDown" class="btn-down">↓</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h4>世界坐标平移 (World Position)</h4>
             <div class="slider-container">
                 <span style="color: #ff5555;">X 轴:</span>
                 <input type="range" id="posX" min="-5" max="5" step="0.1" value="0">
@@ -75,7 +92,7 @@
         </div>
 
         <div class="control-group">
-            <h4>旋转控制 (Rotation)</h4>
+            <h4>物体旋转控制 (Rotation)</h4>
             <div class="slider-container">
                 <span style="color: #ff5555;">X 轴:</span>
                 <input type="range" id="rotX" min="-180" max="180" step="1" value="90">
@@ -93,8 +110,8 @@
             </div>
         </div>
         
-        <button id="btn-2pt" onclick="setToTwoPointPerspective()">📐 强制两点透视 (垂直Z轴)</button>
-        <button onclick="resetAll()">🔄 重置方块与摄像机</button>
+        <button id="btn-2pt" onclick="setToTwoPointPerspective()">强制两点透视 (垂直Z轴)</button>
+        <button onclick="resetAll()">重置一切</button>
     </div>
 
     <script>
@@ -103,7 +120,6 @@
         scene.fog = new THREE.FogExp2(0x1a1a1a, 0.0004);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
-
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
@@ -128,7 +144,7 @@
         const axesHelper = new THREE.AxesHelper(size * 1.5);
         cubeGroup.add(axesHelper);
 
-        // ================= 3. 绘制无限延长线 =================
+        // ================= 3. 无限延长线与消失点连线 =================
         const extLength = 2000; 
         const offset = size / 2;
 
@@ -136,17 +152,10 @@
         const matY = new THREE.LineBasicMaterial({ color: 0x55ff55, transparent: true, opacity: 0.5 });
         const matZ = new THREE.LineBasicMaterial({ color: 0x5555ff, transparent: true, opacity: 0.5 });
 
-        [-offset, offset].forEach(y => { [-offset, offset].forEach(z => {
-            cubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-extLength, y, z), new THREE.Vector3(extLength, y, z)]), matX));
-        });});
-        [-offset, offset].forEach(x => { [-offset, offset].forEach(z => {
-            cubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, -extLength, z), new THREE.Vector3(x, extLength, z)]), matY));
-        });});
-        [-offset, offset].forEach(x => { [-offset, offset].forEach(y => {
-            cubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, y, -extLength), new THREE.Vector3(x, y, extLength)]), matZ));
-        });});
+        [-offset, offset].forEach(y => { [-offset, offset].forEach(z => { cubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-extLength, y, z), new THREE.Vector3(extLength, y, z)]), matX)); });});
+        [-offset, offset].forEach(x => { [-offset, offset].forEach(z => { cubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, -extLength, z), new THREE.Vector3(x, extLength, z)]), matY)); });});
+        [-offset, offset].forEach(x => { [-offset, offset].forEach(y => { cubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, y, -extLength), new THREE.Vector3(x, y, extLength)]), matZ)); });});
 
-        // ================= 4. 消失点连线 =================
         const xyLinePoints = [
             new THREE.Vector3(extLength, 0, 0), new THREE.Vector3(0, extLength, 0),    
             new THREE.Vector3(0, extLength, 0), new THREE.Vector3(-extLength, 0, 0),   
@@ -157,10 +166,9 @@
         xyVPLine.visible = false; 
         cubeGroup.add(xyVPLine);
 
-        // ================= 5. UI 交互逻辑 =================
+        // ================= 4. UI 交互 =================
         const uiElements = {
-            autoRotate: document.getElementById('autoRotate'),
-            showXYLine: document.getElementById('showXYLine'),
+            autoRotate: document.getElementById('autoRotate'), showXYLine: document.getElementById('showXYLine'),
             posX: document.getElementById('posX'), posY: document.getElementById('posY'), posZ: document.getElementById('posZ'),
             rotX: document.getElementById('rotX'), rotY: document.getElementById('rotY'), rotZ: document.getElementById('rotZ'),
             valPosX: document.getElementById('valPosX'), valPosY: document.getElementById('valPosY'), valPosZ: document.getElementById('valPosZ'),
@@ -168,18 +176,9 @@
         };
 
         function updateTransform() {
-            cubeGroup.position.set(
-                parseFloat(uiElements.posX.value),
-                parseFloat(uiElements.posZ.value), 
-                parseFloat(uiElements.posY.value)
-            );
-
+            cubeGroup.position.set(parseFloat(uiElements.posX.value), parseFloat(uiElements.posZ.value), parseFloat(uiElements.posY.value));
             if (!uiElements.autoRotate.checked) {
-                cubeGroup.rotation.set(
-                    THREE.MathUtils.degToRad(parseFloat(uiElements.rotX.value)),
-                    THREE.MathUtils.degToRad(parseFloat(uiElements.rotY.value)),
-                    THREE.MathUtils.degToRad(parseFloat(uiElements.rotZ.value))
-                );
+                cubeGroup.rotation.set(THREE.MathUtils.degToRad(parseFloat(uiElements.rotX.value)), THREE.MathUtils.degToRad(parseFloat(uiElements.rotY.value)), THREE.MathUtils.degToRad(parseFloat(uiElements.rotZ.value)));
             }
             updateLabels();
         }
@@ -188,73 +187,81 @@
             uiElements.valPosX.innerText = parseFloat(uiElements.posX.value).toFixed(1);
             uiElements.valPosY.innerText = parseFloat(uiElements.posY.value).toFixed(1);
             uiElements.valPosZ.innerText = parseFloat(uiElements.posZ.value).toFixed(1);
-            
             uiElements.valRotX.innerText = Math.round(THREE.MathUtils.radToDeg(cubeGroup.rotation.x)) % 360 + '°';
             uiElements.valRotY.innerText = Math.round(THREE.MathUtils.radToDeg(cubeGroup.rotation.y)) % 360 + '°';
             uiElements.valRotZ.innerText = Math.round(THREE.MathUtils.radToDeg(cubeGroup.rotation.z)) % 360 + '°';
         }
 
-        ['posX', 'posY', 'posZ', 'rotX', 'rotY', 'rotZ'].forEach(id => {
-            uiElements[id].addEventListener('input', updateTransform);
-        });
+        ['posX', 'posY', 'posZ', 'rotX', 'rotY', 'rotZ'].forEach(id => { uiElements[id].addEventListener('input', updateTransform); });
 
         function setToTwoPointPerspective() {
-            uiElements.autoRotate.checked = false;
-            uiElements.rotX.value = 90;
-            uiElements.rotZ.value = 0;
-            updateTransform();
-
-            camera.position.y = controls.target.y;
-            controls.update();
+            uiElements.autoRotate.checked = false; uiElements.rotX.value = 90; uiElements.rotZ.value = 0; updateTransform();
+            camera.position.y = controls.target.y; controls.update();
         }
 
         function resetAll() {
-            camera.position.set(3, 3, 5);
-            camera.lookAt(0, 0, 0);
-            controls.target.set(0, 0, 0);
-            
+            camera.position.set(3, 3, 5); camera.lookAt(0, 0, 0); controls.target.set(0, 0, 0);
             uiElements.posX.value = 0; uiElements.posY.value = 0; uiElements.posZ.value = 0;
-            uiElements.rotX.value = 90; 
-            uiElements.rotY.value = 0; uiElements.rotZ.value = 0;
+            uiElements.rotX.value = 90; uiElements.rotY.value = 0; uiElements.rotZ.value = 0;
             uiElements.autoRotate.checked = false;
-            
-            updateTransform();
-            controls.update();
+            updateTransform(); controls.update();
         }
         resetAll();
 
-        // ================= 新增：面板显隐切换逻辑 =================
         let isPanelVisible = true;
         function toggleControls() {
-            const panel = document.getElementById('controls');
-            const btn = document.getElementById('togglePanelBtn');
+            const panel = document.getElementById('controls'); const btn = document.getElementById('togglePanelBtn');
             isPanelVisible = !isPanelVisible;
-            
-            if (isPanelVisible) {
-                panel.style.display = 'block';
-                btn.innerText = '👁️ 隐藏面板';
-            } else {
-                panel.style.display = 'none';
-                btn.innerText = '⚙️ 显示面板';
-            }
+            if (isPanelVisible) { panel.style.display = 'block'; btn.innerText = '⚙️ 隐藏面板'; } 
+            else { panel.style.display = 'none'; btn.innerText = '⚙️ 显示面板'; }
         }
+
+        // ================= 5. 新增：画面平移逻辑 =================
+        const panState = { up: false, down: false, left: false, right: false };
+        const panSpeed = 0.08;
+
+        function panCamera(deltaX, deltaY) {
+            // 获取摄像机当前的局部 X轴(向右) 和 Y轴(向上)
+            const right = new THREE.Vector3(); const up = new THREE.Vector3();
+            camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+            
+            right.multiplyScalar(deltaX); up.multiplyScalar(deltaY);
+            
+            // 同时移动摄像机和观察目标点，实现完美的画面平移
+            camera.position.add(right).add(up);
+            controls.target.add(right).add(up);
+            controls.update();
+        }
+
+        function bindPanBtn(id, dir) {
+            const btn = document.getElementById(id);
+            const start = (e) => { e.preventDefault(); panState[dir] = true; };
+            const stop = (e) => { e.preventDefault(); panState[dir] = false; };
+            
+            btn.addEventListener('mousedown', start); btn.addEventListener('mouseup', stop); btn.addEventListener('mouseleave', stop);
+            btn.addEventListener('touchstart', start, {passive: false}); btn.addEventListener('touchend', stop, {passive: false});
+        }
+
+        bindPanBtn('panUp', 'up'); bindPanBtn('panDown', 'down'); bindPanBtn('panLeft', 'left'); bindPanBtn('panRight', 'right');
 
         // ================= 6. 动画 =================
         function animate() {
             requestAnimationFrame(animate);
 
+            // 处理持续长按的平移按键
+            if (panState.up) panCamera(0, panSpeed);
+            if (panState.down) panCamera(0, -panSpeed);
+            if (panState.left) panCamera(-panSpeed, 0);
+            if (panState.right) panCamera(panSpeed, 0);
+
             xyVPLine.visible = uiElements.showXYLine.checked;
 
             if (uiElements.autoRotate.checked) {
-                cubeGroup.rotation.x += 0.003;
-                cubeGroup.rotation.y += 0.005;
-                cubeGroup.rotation.z += 0.002;
-                
+                cubeGroup.rotation.x += 0.003; cubeGroup.rotation.y += 0.005; cubeGroup.rotation.z += 0.002;
                 uiElements.rotX.value = Math.round(THREE.MathUtils.radToDeg(cubeGroup.rotation.x)) % 360;
                 uiElements.rotY.value = Math.round(THREE.MathUtils.radToDeg(cubeGroup.rotation.y)) % 360;
                 uiElements.rotZ.value = Math.round(THREE.MathUtils.radToDeg(cubeGroup.rotation.z)) % 360;
                 updateLabels();
-                
                 uiElements.rotX.disabled = true; uiElements.rotY.disabled = true; uiElements.rotZ.disabled = true;
             } else {
                 uiElements.rotX.disabled = false; uiElements.rotY.disabled = false; uiElements.rotZ.disabled = false;
